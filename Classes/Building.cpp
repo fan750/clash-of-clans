@@ -53,37 +53,50 @@ void Building::onDeath() {
 }
 
 void Building::initBuildingProperties() {
-    // 根据类型设置不同的颜色和血量，暂时用色块代替图片
-    Color3B color = Color3B::WHITE;
+    // 1. 定义一个变量存文件名
+    std::string filename = "CloseNormal.png"; // 默认图片(防崩)
     int hp = 500;
 
+   
     switch (m_type) {
     case BuildingType::TOWN_HALL:
-        color = Color3B::BLUE; // 蓝色大本营
+        filename = "TownHall.png";
         hp = 2000;
         break;
     case BuildingType::CANNON:
-        color = Color3B::RED;  // 红色加农炮
+        filename = "Cannon.png";
         hp = 800;
         break;
     case BuildingType::GOLD_MINE:
-        color = Color3B::YELLOW; // 黄色金矿
+        filename = "GoldMine.png";
         hp = 600;
         break;
+    case BuildingType::ARCHER_TOWER:
+        filename = "ArcherTower.png";
+        hp = 700;
+        break;
     case BuildingType::WALL:
-        color = Color3B::GRAY;
+        filename = "Wall.png";
         hp = 1000;
         break;
     default:
         break;
     }
 
-    // 设置父类属性
+    // 3. 【核心修改】加载图片纹理
+    this->setTexture(filename);
+
+    // 4. 设置其他属性
     this->setProperties(hp, CampType::PLAYER);
 
-    // 使用纯色块作为临时外观 (40x40像素)
-    this->setTextureRect(Rect(0, 0, 40, 40));
-    this->setColor(color);
+    // 5. 【可选】调整大小 (Scale)
+    // 图片可能很大(比如 500x500)，我们需要把它缩放到合适的大小(比如 64x64)
+    // 假设你想让所有建筑大约占 60x60 像素：
+    float targetSize = 60.0f;
+    Size contentSize = this->getContentSize(); // 获取图片原始大小
+    if (contentSize.width > 0) {
+        this->setScale(targetSize / contentSize.width);
+    }
 }
 
 void Building::upgrade() {

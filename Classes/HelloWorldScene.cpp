@@ -27,6 +27,34 @@ bool HelloWorld::init() {
     if (!Scene::init()) return false;
 
     Size visibleSize = Director::getInstance()->getVisibleSize();
+    // 1. 创建背景精灵 (确保文件名正确，且图片在 Resources 里)
+    auto background = Sprite::create("battleback1.png");
+
+    if (background) {
+        // 2. 放在屏幕正中间
+        background->setPosition(visibleSize / 2);
+
+        // 3. 【关键】自动缩放以铺满屏幕
+        // 获取图片原始大小
+        Size bgSize = background->getContentSize();
+
+        // 计算需要的缩放倍数
+        float scaleX = visibleSize.width / bgSize.width;
+        float scaleY = visibleSize.height / bgSize.height;
+
+        // 取较大的那个缩放值，确保不留黑边 (Cover 模式)
+        float finalScale = std::max(scaleX, scaleY);
+        background->setScale(finalScale);
+
+        // 4. 放在最底层 (ZOrder = -99)
+        this->addChild(background, -99);
+    }
+    else {
+        CCLOG("Error: Background image not found!");
+    }
+    auto myTown = Building::create(BuildingType::TOWN_HALL);
+    myTown->setPosition(Vec2(visibleSize.width / 2, visibleSize.height / 2));
+    this->addChild(myTown);
 
     // 1. 初始化数据
     // 因为我们在 GameManager 里加了检查，所以这里放心调用，只有第一次会给 2000

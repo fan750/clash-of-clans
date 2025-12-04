@@ -18,6 +18,7 @@ bool GameEntity::init() {
         return false;
     }
 
+
     // 初始化成功
     return true;
 }
