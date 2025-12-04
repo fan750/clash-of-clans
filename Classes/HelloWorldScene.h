@@ -1,44 +1,68 @@
-/****************************************************************************
- Copyright (c) 2017-2018 Xiamen Yaji Software Co., Ltd.
- 
- http://www.cocos2d-x.org
- 
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
- 
- The above copyright notice and this permission notice shall be included in
- all copies or substantial portions of the Software.
- 
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- THE SOFTWARE.
- ****************************************************************************/
-
 #ifndef __HELLOWORLD_SCENE_H__
 #define __HELLOWORLD_SCENE_H__
 
 #include "cocos2d.h"
+#include "ui/CocosGUI.h"
+#include "Building.h" // 确保路径正确，可能是 "Building.h"
+
+struct ShopItem {
+    std::string name;
+    BuildingType type;
+    int price;
+    bool isGold; // true=金币买, false=圣水买
+};
 
 class HelloWorld : public cocos2d::Scene
 {
 public:
     static cocos2d::Scene* createScene();
 
-    virtual bool init();
-    
-    // a selector callback
+    virtual bool init() override;
+
+    // 触摸回调
+    bool onTouchBegan(cocos2d::Touch* touch, cocos2d::Event* event);
+    void onTouchMoved(cocos2d::Touch* touch, cocos2d::Event* event); // 让建筑跟随手指移动
+
+    // 关闭按钮回调
     void menuCloseCallback(cocos2d::Ref* pSender);
-    
-    // implement the "static create()" method manually
+
+    // CREATE_FUNC 宏只能出现一次！它会自动生成 create() 函数
     CREATE_FUNC(HelloWorld);
+
+private:
+    // 初始化商店UI
+    void initShopUI();
+    // 显示/隐藏商店
+    void toggleShop();
+    // 尝试购买建筑
+    void tryBuyBuilding(const ShopItem& item);
+
+private:
+    // 商店的主面板
+    cocos2d::ui::Layout* m_shopLayer;
+
+    // 【关键】当前正在放置的“虚影”建筑
+    // 如果这个指针不为空，说明玩家正在选位置
+    Building* m_pendingBuilding;
+
+    // 记录正在放置的建筑要多少钱 (放置成功才扣费)
+    int m_pendingCost;
+    bool m_pendingIsGold;
+
+    // 【新增】标记：是否正在等待确认放置
+    bool m_isConfirming;
+
+    // 【新增】存放“确定/取消”按钮的节点（方便统一删除）
+    cocos2d::Node* m_confirmLayer;
+
+    // 【新增】显示确认菜单
+    void showConfirmationUI(cocos2d::Vec2 pos);
+
+    // 【新增】点击“确定”后的逻辑
+    void onConfirmPlacement();
+
+    // 【新增】点击“取消”后的逻辑
+    void onCancelPlacement();
 };
 
 #endif // __HELLOWORLD_SCENE_H__

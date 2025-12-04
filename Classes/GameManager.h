@@ -2,28 +2,43 @@
 #define __GAME_MANAGER_H__
 
 #include "cocos2d.h"
+#include "Building.h" // 需要引用 BuildingType
+
+// 定义一个结构体，专门存建筑的“档案”
+struct BuildingData {
+    BuildingType type;
+    cocos2d::Vec2 position;
+};
 
 class GameManager {
 public:
     static GameManager* getInstance();
 
-    // 初始化初始资源
+    // 初始化账户 (带防重置检查)
     void initAccount(int gold, int elixir);
+    bool isInitialized() const { return m_isInitialized; }
 
-    // 增加/减少资源
     void addGold(int amount);
     void addElixir(int amount);
-
-    // 获取当前资源
     int getGold() const { return m_gold; }
     int getElixir() const { return m_elixir; }
+
+    // 【新增】保存一个建筑
+    void addHomeBuilding(BuildingType type, cocos2d::Vec2 pos);
+
+    // 【新增】获取所有保存的建筑
+    const std::vector<BuildingData>& getHomeBuildings();
 
 private:
     GameManager();
     static GameManager* s_instance;
 
+    bool m_isInitialized; // 标记是否已经初始化过
     int m_gold;
     int m_elixir;
+
+    // 【新增】建筑数据列表
+    std::vector<BuildingData> m_homeBuildings;
 };
 
 #endif // __GAME_MANAGER_H__
