@@ -67,8 +67,8 @@ bool BattleScene::init() {
     createSelectButton("Bomb", Color3B::GRAY, TroopType::BOMBERMAN, 3); // 白色按钮文字看不清，用灰色代替背景
 
     // 5. 撤退按钮 (保持不变)
-    auto backBtn = Button::create("CloseNormal.png");
-    backBtn->setTitleText("Back");
+    auto backBtn = Button::create("back.png");
+    backBtn->setScale(0.3f);
     backBtn->setPosition(Vec2(50, visibleSize.height - 50));
     backBtn->addClickEventListener([=](Ref*) {
         Director::getInstance()->replaceScene(TransitionFade::create(0.5f, HelloWorld::createScene()));

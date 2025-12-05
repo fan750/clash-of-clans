@@ -30,9 +30,18 @@ public:
     CREATE_FUNC(GameEntity);
 
 protected:
+    void initHpBar();
+    void updateHpBar();
+    void removeHpBar();
+
+protected:
     int m_maxHp;
     int m_currentHp;
     CampType m_camp;
+
+    // ÑªÌõÏà¹Ø
+    cocos2d::DrawNode* m_hpBarDraw;
+    float m_hpBarWidth;
 };
 
 #endif // __GAME_ENTITY_H__

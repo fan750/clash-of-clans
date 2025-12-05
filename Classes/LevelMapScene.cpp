@@ -1,9 +1,9 @@
 #include "LevelMapScene.h"
 #include "HelloWorldScene.h" // 为了能返回主菜单
 #include "BattleScene.h"     // 为了进入战斗
+#include <algorithm>
 
 USING_NS_CC;
-using namespace ui;
 
 Scene* LevelMapScene::createScene() {
     return LevelMapScene::create();
@@ -13,9 +13,14 @@ bool LevelMapScene::init() {
     if (!Scene::init()) return false;
 
     Size visibleSize = Director::getInstance()->getVisibleSize();
-
+    auto level1 = ui::Button::create("king1.png");
+    auto level2 = ui::Button::create("king2.png");
+    auto level3 = ui::Button::create("king3.png");
+    level.push_back(level1);
+    level.push_back(level2);
+    level.push_back(level3);
     // 1. 背景 (可以用你的 Background.jpg)
-    auto bg = Sprite::create("Background.jpg");
+    auto bg = Sprite::create("option_background.jpg");
     if (bg) {
         bg->setPosition(visibleSize / 2);
         // 简单适配铺满
@@ -26,22 +31,26 @@ bool LevelMapScene::init() {
     }
 
     // 2. 标题
-    auto title = Label::createWithSystemFont("Select Level", "Arial", 40);
-    title->setPosition(Vec2(visibleSize.width / 2, visibleSize.height - 100));
-    title->setColor(Color3B::YELLOW);
+    auto title = Label::createWithSystemFont(u8"在这片富饶的土地上，有三个穷凶极恶的国王，分别是"
+        "\n精通计算机组成原理的计组大王\n熟练掌握各种数据结构的数据结构大王"
+        "\n专攻科学王冠的离散数学大王\n你敢直视他们吗?", "Microsoft YaHei", 28);
+    title->setPosition(Vec2(visibleSize.width * 0.5f, visibleSize.height * 0.75f));
+    title->setTextColor(Color4B::WHITE);
+    title->setAlignment(TextHAlignment::CENTER);
+    title->setMaxLineWidth(static_cast<int>(visibleSize.width * 0.8f));
     this->addChild(title);
 
     // 3. 创建关卡按钮
     // 关卡 1
-    createLevelButton(1, Vec2(visibleSize.width * 0.3, visibleSize.height / 2));
+    createLevelButton(1, Vec2(visibleSize.width * 0.3, visibleSize.height / 3));
     // 关卡 2
-    createLevelButton(2, Vec2(visibleSize.width * 0.5, visibleSize.height / 2));
+    createLevelButton(2, Vec2(visibleSize.width * 0.5, visibleSize.height / 3));
     // 关卡 3
-    createLevelButton(3, Vec2(visibleSize.width * 0.7, visibleSize.height / 2));
+    createLevelButton(3, Vec2(visibleSize.width * 0.7, visibleSize.height / 3));
 
     // 4. 返回主菜单按钮
-    auto backBtn = Button::create("CloseNormal.png");
-    backBtn->setTitleText("Home");
+    auto backBtn = ui::Button::create("back.png");
+    backBtn->setScale(0.3f);
     backBtn->setPosition(Vec2(50, visibleSize.height - 50));
     backBtn->addClickEventListener([=](Ref*) {
         Director::getInstance()->replaceScene(TransitionFade::create(0.5f, HelloWorld::createScene()));
@@ -52,10 +61,13 @@ bool LevelMapScene::init() {
 }
 
 void LevelMapScene::createLevelButton(int levelIndex, Vec2 pos) {
-    auto btn = Button::create("CloseNormal.png");
-    btn->setTitleText("Level " + std::to_string(levelIndex));
-    btn->setTitleFontSize(24);
-    btn->setColor(Color3B::GREEN); // 关卡按钮设为绿色
+    // levelIndex from 1..N, vector
+    int idx = levelIndex - 1;
+    if (idx < 0 || idx >= static_cast<int>(level.size())) return;
+
+    auto btn = level[idx];
+    if (!btn) return;
+    btn->setScale(0.5f); 
     btn->setPosition(pos);
 
     // 点击逻辑

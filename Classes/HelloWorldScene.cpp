@@ -8,6 +8,7 @@
 #include "BattleScene.h"
 #include "ui/CocosGUI.h"
 #include "LevelMapScene.h"
+#include"MenuBuilder.h";
 USING_NS_CC;
 using namespace ui;
 
@@ -60,7 +61,6 @@ bool HelloWorld::init() {
     // 1. 初始化数据
     // 因为我们在 GameManager 里加了检查，所以这里放心调用，只有第一次会给 2000
     GameManager::getInstance()->initAccount(2000, 2000);
-
     m_pendingBuilding = nullptr;
 
     // 【新增】初始化
@@ -70,13 +70,33 @@ bool HelloWorld::init() {
     // 2. 添加 UI 层 (之前的代码)
     auto uiLayer = GameUI::create();
     this->addChild(uiLayer, 100);
-
+    Sprite* music_sound = Sprite::create("sound.png");
+    Sprite* music_off = Sprite::create("sound_off.png");
+    music_sound->setScale(0.3f);
+    music_off->setScale(0.3f);
+    auto menu_music = MenuBuilder::createToggleMenu("sound.png", "sound_off.png",
+        [&](Ref* ref) {
+            auto item = dynamic_cast<MenuItemToggle*>(ref);
+            if (item) {
+                if (item->getSelectedIndex() == 0) {
+                    auto engine = CocosDenshion::SimpleAudioEngine::getInstance();
+                    engine->playBackgroundMusic("backgroundmusic.mp3", true);
+                }
+                else {
+                    auto engine = CocosDenshion::SimpleAudioEngine::getInstance();
+                    engine->stopBackgroundMusic();
+                }
+            }
+        },
+        Vec2(visibleSize.width * 0.05f, visibleSize.height * 0.9f),
+        0.3f);
+    uiLayer->addChild(menu_music);//添加音乐菜单
     // 3. 【新增】商店按钮 (放在左下角)
     auto shopBtn = Button::create("CloseNormal.png");
     shopBtn->setTitleText("SHOP");
     shopBtn->setTitleFontSize(24);
     shopBtn->setColor(Color3B::ORANGE);
-    shopBtn->setPosition(Vec2(visibleSize.width - 200, 100));
+    shopBtn->setPosition(Vec2(visibleSize.width - 400, 125));
     shopBtn->addClickEventListener([=](Ref*) {
         this->toggleShop(); // 点击开关商店
         });
@@ -86,9 +106,9 @@ bool HelloWorld::init() {
     initShopUI();
 
     // 5. 进攻按钮 (之前的代码，保持不变)
-    auto attackBtn = Button::create("CloseNormal.png");
-    attackBtn->setTitleText("ATTACK!");
-    attackBtn->setPosition(Vec2(visibleSize.width - 100, 100));
+    auto attackBtn = Button::create("assault.png");
+    attackBtn->setScale(0.3f);
+    attackBtn->setPosition(Vec2(visibleSize.width*0.92f, visibleSize.height*0.1f));
     attackBtn->addClickEventListener([=](Ref*) {
         auto scene = LevelMapScene::createScene();
         Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
