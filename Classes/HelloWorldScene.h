@@ -25,6 +25,7 @@ public:
 
     // 关闭按钮回调
     void menuCloseCallback(cocos2d::Ref* pSender);
+    void playCollectAnimation(int amount, cocos2d::Vec2 startPos, BuildingType type);
 
     // CREATE_FUNC 宏只能出现一次！它会自动生成 create() 函数
     CREATE_FUNC(HelloWorld);

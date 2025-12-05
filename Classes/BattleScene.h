@@ -7,8 +7,13 @@
 
 class BattleScene : public cocos2d::Scene {
 public:
-    static cocos2d::Scene* createScene();
+    // 【修改】createScene 现在需要一个参数：关卡号
+    static cocos2d::Scene* createScene(int levelIndex);
+
     virtual bool init() override;
+
+    // 【新增】根据关卡号布置敌人
+    void loadLevel(int levelIndex);
     virtual void onExit() override;
     bool onTouchBegan(cocos2d::Touch* touch, cocos2d::Event* event);
 

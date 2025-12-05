@@ -40,11 +40,15 @@ bool GameUI::init() {
 }
 
 void GameUI::updateLabels() {
-    // 从 GameManager 取出最新数值
-    int gold = GameManager::getInstance()->getGold();
-    int elixir = GameManager::getInstance()->getElixir();
+    auto gm = GameManager::getInstance();
 
-    // 更新文字
-    m_goldLabel->setString("Gold: " + std::to_string(gold));
-    m_elixirLabel->setString("Elixir: " + std::to_string(elixir));
+    // 显示格式： Gold: 100 / 1000
+    std::string goldStr = "Gold: " + std::to_string(gm->getGold()) +
+        "/" + std::to_string(gm->getMaxGold());
+
+    std::string elixirStr = "Elixir: " + std::to_string(gm->getElixir()) +
+        "/" + std::to_string(gm->getMaxElixir());
+
+    m_goldLabel->setString(goldStr);
+    m_elixirLabel->setString(elixirStr);
 }

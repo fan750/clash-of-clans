@@ -10,7 +10,9 @@ enum class BuildingType {
     ELIXIR_COLLECTOR, // 圣水收集器
     CANNON,         // 加农炮 (防御)
     ARCHER_TOWER,   // 箭塔
-    WALL            // 围墙
+    WALL,            // 围墙
+    ELIXIR_STORAGE,   // 圣水瓶 (存储) [新增]
+    GOLD_STORAGE      // 储金罐 (存储) [新增]
 };
 
 class Building : public GameEntity {
@@ -35,6 +37,12 @@ public:
     BuildingType getBuildingType() const { return m_type; }
     int getLevel() const { return m_level; }
 
+    // 【新增】尝试收集资源
+    // 返回值：收集到了多少资源 (用于显示飘字)
+    int collectResource();
+
+    // 【新增】获取内部存储状态 (用于UI显示，比如满了显示图标)
+    bool isFull() const;
 protected:
     // 初始化特定类型的属性（血量、图片等）
     void initBuildingProperties();
@@ -45,6 +53,14 @@ protected:
 
     // 生产/攻击计时器
     float m_timer;
+
+    // 【新增】资源相关属性
+    float m_productionRate;      // 生产速率 (每秒产出多少)
+    float m_maxStorage;          // 内部最大容量 (存满即停)
+    float m_currentStored;       // 当前内部积压的资源 (还没被收集的)
+
+    // 生产计时器累加器
+    float m_productionAccumulator;
 };
 
 #endif // __BUILDING_H__

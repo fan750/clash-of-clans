@@ -45,17 +45,30 @@ bool Building::init() {
 }
 
 void Building::onDeath() {
-    // 告诉管理者：我挂了，别让兵再来打我了！
+    // 如果是存储建筑，死的时候要扣除上限
+    if (m_type == BuildingType::ELIXIR_STORAGE) {
+        GameManager::getInstance()->modifyMaxElixir(-1000);
+    }
+    else if (m_type == BuildingType::GOLD_STORAGE) {
+        GameManager::getInstance()->modifyMaxGold(-1000);
+    }
+
     BattleManager::getInstance()->removeBuilding(this);
 
-    // 调用父类的死亡逻辑 (移除节点)
+    // 如果是主基地模式，还需要通知 GameManager 移除记录 (addHomeBuilding 的反向操作)
+    // 这里暂时省略，视你是否实现了移除建筑功能而定
+
     GameEntity::onDeath();
 }
 
 void Building::initBuildingProperties() {
     // 1. 定义一个变量存文件名
-    std::string filename = "CloseNormal.png"; // 默认图片(防崩)
+   // 默认属性
+    std::string filename = "CloseNormal.png";
     int hp = 500;
+    m_productionRate = 0;
+    m_maxStorage = 0;     // 这是“内部暂存”上限 (收集器用)
+    m_currentStored = 0;
 
    
     switch (m_type) {
@@ -79,6 +92,24 @@ void Building::initBuildingProperties() {
         filename = "Wall.png";
         hp = 1000;
         break;
+    case BuildingType::ELIXIR_COLLECTOR:
+        filename = "ElixirCollector.png"; // 找个紫色的图
+        hp = 600;
+        // 核心机制：自动生产 & 内部暂存
+        m_productionRate = 10.0f;  // 产出速率
+        m_maxStorage = 100.0f;     // 内部暂存满了就停
+        break;
+
+    case BuildingType::ELIXIR_STORAGE:
+        filename = "ElixirStorage.png"; // 找个大罐子的图
+        hp = 1500; // 圣水瓶血厚
+        // 核心机制：被动保管 (不生产)
+        m_productionRate = 0;
+
+        // 核心机制：增加总上限
+        // 建造出来时，让大管家增加 1000 容量
+        GameManager::getInstance()->modifyMaxElixir(1000);
+        break;
     default:
         break;
     }
@@ -92,10 +123,27 @@ void Building::initBuildingProperties() {
     // 5. 【可选】调整大小 (Scale)
     // 图片可能很大(比如 500x500)，我们需要把它缩放到合适的大小(比如 64x64)
     // 假设你想让所有建筑大约占 60x60 像素：
-    float targetSize = 60.0f;
+    float targetSize = 100.0f;
     Size contentSize = this->getContentSize(); // 获取图片原始大小
     if (contentSize.width > 0) {
         this->setScale(targetSize / contentSize.width);
+    }
+    // 默认非资源建筑属性
+    m_productionRate = 0;
+    m_maxStorage = 0;
+    m_currentStored = 0;
+    m_productionAccumulator = 0;
+
+    // 【新增】配置金矿属性 (数值参考 CoC 1级金矿)
+    if (m_type == BuildingType::GOLD_MINE) {
+        // 假设：1级金矿每小时200，容量500
+        // 为了演示效果，我们调快一点：每秒产 10，容量 100
+        m_productionRate = 10.0f;
+        m_maxStorage = 100.0f;
+    }
+    else if (m_type == BuildingType::ELIXIR_COLLECTOR) {
+        m_productionRate = 10.0f;
+        m_maxStorage = 100.0f;
     }
 }
 
@@ -112,12 +160,35 @@ void Building::upgrade() {
 void Building::updateLogic(float dt) {
     m_timer += dt;
 
-    // 1. 资源建筑逻辑 (之前写过的)
-    if (m_type == BuildingType::GOLD_MINE) {
-        if (m_timer >= 2.0f) {
-            // 产出金币...
-            m_timer = 0;
-            GameManager::getInstance()->addGold(10);
+    // 机制：自动生产 & 存满即停
+
+      // 只有资源类建筑才生产
+    // 核心机制：存满即停
+    if (m_productionRate > 0) 
+    {
+        if (m_currentStored >= m_maxStorage) {
+            m_currentStored = m_maxStorage;
+            return; // 满了就不跑下面的累加代码了 -> 停止生产
+        }
+        // ... 累加代码 ...
+    
+
+        // 2. 累加生产
+        // 我们不直接用 m_currentStored += rate * dt，因为 int 丢失精度
+        // 我们用一个累加器，攒够 1 块钱再加进去
+        m_productionAccumulator += m_productionRate * dt;
+
+        if (m_productionAccumulator >= 1.0f) {
+            int amountToAdd = (int)m_productionAccumulator;
+            m_currentStored += amountToAdd;
+            m_productionAccumulator -= amountToAdd; // 扣除已加部分
+
+            // 再次检查上限
+            if (m_currentStored >= m_maxStorage) {
+                m_currentStored = m_maxStorage;
+            }
+
+            // (可选) 可以在这里更新头顶的小图标，如果满了显示“收集气泡”
         }
     }
     // 2. 【新增】防御塔逻辑
@@ -146,4 +217,32 @@ void Building::updateLogic(float dt) {
             }
         }
     }
+}
+
+// 机制：玩家收集 & 转入金库
+int Building::collectResource() {
+    // 1. 如果没存货，收集个寂寞
+    if (m_currentStored <= 0) return 0;
+
+    // 2. 取出所有存货 (取整)
+    int amountToCollect = (int)m_currentStored;
+
+    // 3. 转入国库 (GameManager)
+    if (m_type == BuildingType::GOLD_MINE) {
+        GameManager::getInstance()->addGold(amountToCollect);
+    }
+    else if (m_type == BuildingType::ELIXIR_COLLECTOR) {
+        GameManager::getInstance()->addElixir(amountToCollect);
+    }
+
+    // 4. 清空内部存储，恢复生产
+    m_currentStored = 0.0f;
+    m_productionAccumulator = 0.0f;
+
+    CCLOG("Collected %d resources!", amountToCollect);
+    return amountToCollect;
+}
+
+bool Building::isFull() const {
+    return m_currentStored >= m_maxStorage;
 }

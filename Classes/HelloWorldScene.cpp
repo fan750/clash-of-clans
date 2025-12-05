@@ -7,6 +7,7 @@
 #include "GameUI.h"
 #include "BattleScene.h"
 #include "ui/CocosGUI.h"
+#include "LevelMapScene.h"
 USING_NS_CC;
 using namespace ui;
 
@@ -89,7 +90,8 @@ bool HelloWorld::init() {
     attackBtn->setTitleText("ATTACK!");
     attackBtn->setPosition(Vec2(visibleSize.width - 100, 100));
     attackBtn->addClickEventListener([=](Ref*) {
-        Director::getInstance()->replaceScene(TransitionFade::create(0.5f, BattleScene::createScene()));
+        auto scene = LevelMapScene::createScene();
+        Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
         });
     this->addChild(attackBtn);
 
@@ -136,7 +138,10 @@ void HelloWorld::initShopUI() {
         {"Gold Mine", BuildingType::GOLD_MINE, 100, false}, // 100圣水买金矿
         {"Cannon", BuildingType::CANNON, 200, true},        // 200金币买加农炮
         {"Wall", BuildingType::WALL, 50, true},             // 50金币买墙
-        {"Archer Twr", BuildingType::ARCHER_TOWER, 300, true}
+        {"Archer Twr", BuildingType::ARCHER_TOWER, 300, true},
+        { "Elixir Pump", BuildingType::ELIXIR_COLLECTOR, 100, true }, // 用金币买收集器
+        {"Elixir Tank", BuildingType::ELIXIR_STORAGE, 300, true},   // 用金币买圣水瓶
+        {"Gold Storage", BuildingType::GOLD_STORAGE, 300, false}    // 用圣水买储金罐
     };
 
     // 3. 循环创建商品按钮
@@ -265,6 +270,34 @@ bool HelloWorld::onTouchBegan(Touch* touch, Event* event) {
         }
     }
 
+    // 如果没在干别的，就检测是不是点到了建筑 (用于收集资源)
+    Vec2 touchLoc = touch->getLocation();
+
+    // 遍历所有子节点，看看点到了谁
+    // 这种写法比较简单粗暴，适合演示
+    for (auto node : this->getChildren()) {
+        // dynamic_cast 尝试把节点转成 Building
+        // 如果转换成功，说明点到的是个建筑
+        auto building = dynamic_cast<Building*>(node);
+
+        if (building) {
+            // 检查触摸点是否在建筑图片的范围内
+            Rect boundingBox = building->getBoundingBox();
+            if (boundingBox.containsPoint(touchLoc)) {
+
+                // 执行收集！
+                int amount = building->collectResource();
+
+                if (amount > 0) {
+                    // 机制：收集动画
+                    // 播放金币飞向右上角的动画
+                    playCollectAnimation(amount, building->getPosition(), building->getBuildingType());
+                }
+                return true; // 吞噬触摸
+            }
+        }
+    }
+
     return true;
 }
 
@@ -367,4 +400,44 @@ void HelloWorld::onCancelPlacement() {
     m_isConfirming = false;
 
     CCLOG("Placement Cancelled!");
+}
+
+void HelloWorld::playCollectAnimation(int amount, Vec2 startPos, BuildingType type) {
+    // 1. 决定飞什么图标 (金币还是圣水)
+    std::string iconName = (type == BuildingType::GOLD_MINE) ? "coin_icon.png" : "elixir_icon.png";
+    // 假设右上角 UI 的位置是 (VisibleWidth - 50, VisibleHeight - 30)
+    // 最好从 GameUI::getInstance() 获取，这里先硬编码近似位置
+    Size visibleSize = Director::getInstance()->getVisibleSize();
+    Vec2 targetPos = Vec2(visibleSize.width - 100, visibleSize.height - 30);
+
+    auto icon = Sprite::create(iconName);
+    icon->setScale(0.03);
+
+    icon->setPosition(startPos);
+    this->addChild(icon, 200); // 层级要在最上面
+
+    // 3. 飘字 (显示 +100)
+    auto label = Label::createWithSystemFont("+" + std::to_string(amount), "Arial", 24);
+    label->setColor(Color3B::WHITE);
+    label->enableOutline(Color4B::BLACK, 2);
+    label->setPosition(startPos + Vec2(0, 40)); // 在建筑头顶
+    this->addChild(label, 201);
+
+    // 4. 动作序列
+    // 图标动作：先放大弹出 -> 飞向右上角 -> 缩小消失
+    auto jump = JumpBy::create(0.3f, Vec2(0, 0), 30, 1); // 原地跳一下
+    auto move = MoveTo::create(0.5f, targetPos); // 飞过去
+    auto scale = ScaleTo::create(0.1f, 0.0f); // 变没
+    auto remove = RemoveSelf::create();
+
+    icon->runAction(Sequence::create(jump, move, scale, remove, nullptr));
+
+    // 文字动作：向上飘 -> 淡出
+    auto labelMove = MoveBy::create(0.8f, Vec2(0, 50));
+    auto fade = FadeOut::create(0.8f);
+    auto labelSeq = Sequence::create(Spawn::create(labelMove, fade, nullptr), RemoveSelf::create(), nullptr);
+    label->runAction(labelSeq);
+
+    // 5. 播放音效 (如果之前加了的话)
+    // SimpleAudioEngine::getInstance()->playEffect("collect.wav");
 }

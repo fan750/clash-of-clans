@@ -7,8 +7,17 @@
 USING_NS_CC;
 using namespace ui; // 使用 UI 命名空间
 
-Scene* BattleScene::createScene() {
-    return BattleScene::create();
+Scene* BattleScene::createScene(int levelIndex) {
+    // 1. 先创建场景对象 (内部调用 init)
+    auto scene = BattleScene::create();
+
+    // 2. 如果创建成功，加载对应关卡的数据
+    // dynamic_cast 用于安全转换，确保 scene 是 BattleScene 类型
+    if (auto battleScene = dynamic_cast<BattleScene*>(scene)) {
+        battleScene->loadLevel(levelIndex);
+    }
+
+    return scene;
 }
 
 bool BattleScene::init() {
@@ -44,18 +53,6 @@ bool BattleScene::init() {
     // 1. 初始化数据
     BattleManager::getInstance()->clear();
     m_selectedType = TroopType::BARBARIAN; // 默认选野蛮人
-
-    // 2. 布置敌人阵地 (保持不变)
-    auto enemyTown = Building::create(BuildingType::TOWN_HALL);
-    enemyTown->setPosition(Vec2(visibleSize.width / 2, visibleSize.height / 2));
-    this->addChild(enemyTown);
-
-    // 加几个墙给炸弹人炸
-    for (int i = 0; i < 5; i++) {
-        auto wall = Building::create(BuildingType::WALL);
-        wall->setPosition(Vec2(visibleSize.width / 2 - 100 + i * 40, visibleSize.height / 2 - 100));
-        this->addChild(wall);
-    }
 
     // 3. 【新增】创建提示文字
     m_infoLabel = Label::createWithSystemFont("Selected: Barbarian", "Arial", 24);
@@ -130,4 +127,51 @@ bool BattleScene::onTouchBegan(Touch* touch, Event* event) {
 void BattleScene::onExit() {
     Scene::onExit();
     BattleManager::getInstance()->clear();
+}
+
+// 【新增】关卡配置逻辑
+void BattleScene::loadLevel(int levelIndex) {
+    Size visibleSize = Director::getInstance()->getVisibleSize();
+    Vec2 center = visibleSize / 2;
+
+    if (levelIndex == 1) {
+        // --- 第一关：新手村 ---
+        // 只有 1 个大本营
+        auto town = Building::create(BuildingType::TOWN_HALL);
+        town->setPosition(center);
+        this->addChild(town);
+    }
+    else if (levelIndex == 2) {
+        // --- 第二关：初级挑战 ---
+        // 大本营 + 1 个加农炮
+        auto town = Building::create(BuildingType::TOWN_HALL);
+        town->setPosition(center);
+        this->addChild(town);
+
+        auto cannon = Building::create(BuildingType::CANNON);
+        cannon->setPosition(center + Vec2(150, 0)); // 右边放个炮
+        this->addChild(cannon);
+    }
+    else if (levelIndex == 3) {
+        // --- 第三关：攻坚战 ---
+        // 大本营 + 2 个炮 + 围墙保护
+        auto town = Building::create(BuildingType::TOWN_HALL);
+        town->setPosition(center);
+        this->addChild(town);
+
+        // 两个炮
+        auto c1 = Building::create(BuildingType::CANNON);
+        c1->setPosition(center + Vec2(150, 50));
+        this->addChild(c1);
+        auto c2 = Building::create(BuildingType::CANNON);
+        c2->setPosition(center + Vec2(150, -50));
+        this->addChild(c2);
+
+        // 前面放一排墙
+        for (int i = 0; i < 5; i++) {
+            auto wall = Building::create(BuildingType::WALL);
+            wall->setPosition(center + Vec2(80, -100 + i * 50));
+            this->addChild(wall);
+        }
+    }
 }

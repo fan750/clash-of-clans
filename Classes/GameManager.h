@@ -18,16 +18,27 @@ public:
     void initAccount(int gold, int elixir);
     bool isInitialized() const { return m_isInitialized; }
 
-    void addGold(int amount);
-    void addElixir(int amount);
-    int getGold() const { return m_gold; }
-    int getElixir() const { return m_elixir; }
-
+  
     // 【新增】保存一个建筑
     void addHomeBuilding(BuildingType type, cocos2d::Vec2 pos);
 
     // 【新增】获取所有保存的建筑
     const std::vector<BuildingData>& getHomeBuildings();
+
+    // 【修改】增加资源 (带上限检查)
+    void addGold(int amount);
+    void addElixir(int amount);
+
+    // 【新增】修改资源上限 (当建造/升级圣水瓶时调用)
+    void modifyMaxGold(int amount);
+    void modifyMaxElixir(int amount);
+
+    int getGold() const { return m_gold; }
+    int getElixir() const { return m_elixir; }
+
+    // 获取上限 (用于UI显示，比如 1000/2000)
+    int getMaxGold() const { return m_maxGold; }
+    int getMaxElixir() const { return m_maxElixir; }
 
 private:
     GameManager();
@@ -36,6 +47,10 @@ private:
     bool m_isInitialized; // 标记是否已经初始化过
     int m_gold;
     int m_elixir;
+
+    // 【新增】资源上限
+    int m_maxGold;
+    int m_maxElixir;
 
     // 【新增】建筑数据列表
     std::vector<BuildingData> m_homeBuildings;
