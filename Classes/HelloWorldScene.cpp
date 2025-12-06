@@ -60,8 +60,11 @@ bool HelloWorld::init() {
 
     // 1. 初始化数据
     // 因为我们在 GameManager 里加了检查，所以这里放心调用，只有第一次会给 2000
-    GameManager::getInstance()->initAccount(2000, 2000);
+    GameManager::getInstance()->initAccount(500, 500);
     m_pendingBuilding = nullptr;
+
+    // 新增：当前选中的建筑初始化为 nullptr
+    m_selectedBuilding = nullptr;
 
     // 【新增】初始化
     m_isConfirming = false;
@@ -228,8 +231,6 @@ void HelloWorld::onTouchMoved(Touch* touch, Event* event) {
 bool HelloWorld::onTouchBegan(Touch* touch, Event* event) {
     // 情况A: 正在等待确认中
     if (m_isConfirming) {
-        // 如果正在显示 √/× 按钮，点击屏幕其他空白处无效（或者你可以设计成点击空白处等于取消）
-        // 这里我们返回 true 吞掉触摸，强制玩家必须点按钮
         return true;
     }
 
@@ -281,7 +282,6 @@ bool HelloWorld::onTouchBegan(Touch* touch, Event* event) {
 
     // 如果商店是开着的，点击外部可以关闭商店
     if (m_shopLayer->isVisible()) {
-        // 把触摸点转换到商店的坐标系，判断有没有点在商店背景上
         Vec2 nodePos = m_shopLayer->convertToNodeSpace(touch->getLocation());
         Rect box = Rect(0, 0, m_shopLayer->getContentSize().width, m_shopLayer->getContentSize().height);
 
@@ -290,37 +290,56 @@ bool HelloWorld::onTouchBegan(Touch* touch, Event* event) {
         }
     }
 
-    // 如果没在干别的，就检测是不是点到了建筑 (用于收集资源)
+    // 如果没在干别的，就检测是不是点到了建筑 (用于收集资源或选中)
     Vec2 touchLoc = touch->getLocation();
+    bool hitBuilding = false;
 
-    // 遍历所有子节点，看看点到了谁
-    // 这种写法比较简单粗暴，适合演示
     for (auto node : this->getChildren()) {
-        // dynamic_cast 尝试把节点转成 Building
-        // 如果转换成功，说明点到的是个建筑
         auto building = dynamic_cast<Building*>(node);
-
         if (building) {
-            // 检查触摸点是否在建筑图片的范围内
             Rect boundingBox = building->getBoundingBox();
             if (boundingBox.containsPoint(touchLoc)) {
+                // 选中该建筑
+                selectBuilding(building);
 
                 // 执行收集！
                 int amount = building->collectResource();
 
                 if (amount > 0) {
-                    // 机制：收集动画
-                    // 播放金币飞向右上角的动画
                     playCollectAnimation(amount, building->getPosition(), building->getBuildingType());
                 }
+
+                hitBuilding = true;
                 return true; // 吞噬触摸
             }
+        }
+    }
+
+    // 如果没有点中任何建筑，取消选中
+    if (!hitBuilding) {
+        if (m_selectedBuilding) {
+            m_selectedBuilding->hideUpgradeButton();
+            m_selectedBuilding = nullptr;
         }
     }
 
     return true;
 }
 
+void HelloWorld::selectBuilding(Building* building) {
+    if (!building) return;
+
+    // 如果已经选中了别的，先隐藏它的升级按钮
+    if (m_selectedBuilding && m_selectedBuilding != building) {
+        m_selectedBuilding->hideUpgradeButton();
+    }
+
+    m_selectedBuilding = building;
+    // 当选中建筑时，根据当前金币自动显示或隐藏升级按钮
+    m_selectedBuilding->updateUpgradeButtonVisibility();
+}
+
+// ...existing code...
 
 void HelloWorld::menuCloseCallback(Ref* pSender)
 {

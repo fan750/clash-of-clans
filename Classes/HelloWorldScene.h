@@ -37,6 +37,9 @@ private:
     // 尝试购买建筑
     void tryBuyBuilding(const ShopItem& item);
 
+    // 选中建筑处理
+    void selectBuilding(Building* building);
+
 private:
     // 商店的主面板
     cocos2d::ui::Layout* m_shopLayer;
@@ -44,6 +47,9 @@ private:
     // 【关键】当前正在放置的“虚影”建筑
     // 如果这个指针不为空，说明玩家正在选位置
     Building* m_pendingBuilding;
+
+    // 当前选中的建筑（用于显示升级按钮等）
+    Building* m_selectedBuilding;
 
     // 记录正在放置的建筑要多少钱 (放置成功才扣费)
     int m_pendingCost;

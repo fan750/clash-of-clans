@@ -9,10 +9,17 @@ Building::Building()
     : m_type(BuildingType::TOWN_HALL)
     , m_level(1)
     , m_timer(0.0f)
+    , m_upgradeBtn(nullptr)
+    , m_goldListener(nullptr)
 {
 }
 
 Building::~Building() {
+    // 确保移除监听
+    if (m_goldListener) {
+        _eventDispatcher->removeEventListener(m_goldListener);
+        m_goldListener = nullptr;
+    }
 }
 
 Building* Building::create(BuildingType type) {
@@ -171,7 +178,7 @@ void Building::updateLogic(float dt) {
             return; // 满了就不跑下面的累加代码了 -> 停止生产
         }
         // ... 累加代码 ...
-    
+   
 
         // 2. 累加生产
         // 我们不直接用 m_currentStored += rate * dt，因为 int 丢失精度
@@ -245,4 +252,107 @@ int Building::collectResource() {
 
 bool Building::isFull() const {
     return m_currentStored >= m_maxStorage;
+}
+
+int Building::getUpgradeCost() const {
+    // 简单的升级价格公式：基础 200 * 等级
+    return 200 * m_level;
+}
+
+void Building::showUpgradeButton() {
+    using namespace ui;
+    if (m_upgradeBtn) return;
+
+    int cost = getUpgradeCost();
+
+    m_upgradeBtn = Button::create("upgrade.png");
+    if (!m_upgradeBtn) return;
+    m_upgradeBtn->setTitleText(std::string("$") + std::to_string(this->getUpgradeCost()));
+    m_upgradeBtn->setTitleFontName("Arial");
+    m_upgradeBtn->setTitleFontSize(50);
+    m_upgradeBtn->setTitleColor(cocos2d::Color3B::BLACK);
+    m_upgradeBtn->setScale(1.5f);
+
+    // 放在建筑顶部之上（相对于建筑中心）
+    Size contentSize = this->getContentSize();
+    // 计算在父节点局部坐标系中的水平中心点（考虑 anchor）
+    Vec2 anchor = this->getAnchorPoint();
+    float localCenterX = contentSize.width * anchor.x;
+    // 计算顶部本地 Y（contentSize 高度的顶部位置），然后向上偏移
+    float localTopY = contentSize.height * (1.0f - anchor.y);
+    float yOffset = localTopY + 600.0f;
+    m_upgradeBtn->setAnchorPoint(Vec2(0.5f, 0.5f));
+    m_upgradeBtn->setPosition(Vec2(localCenterX, yOffset));
+
+    // 初始可用性
+    bool affordable = GameManager::getInstance()->getGold() >= cost;
+    m_upgradeBtn->setEnabled(affordable);
+    m_upgradeBtn->setBright(affordable);
+
+    // 点击监听
+    m_upgradeBtn->addClickEventListener([this](Ref*) {
+        int cost = this->getUpgradeCost();
+        if (GameManager::getInstance()->getGold() >= cost) {
+            GameManager::getInstance()->addGold(-cost);
+            this->upgrade();
+            this->hideUpgradeButton();
+        }
+        else {
+            CCLOG("Not enough gold to upgrade");
+        }
+    });
+
+    // 添加到建筑节点，这样会随着建筑移动
+    this->addChild(m_upgradeBtn, 300);
+
+    // 注册金币更新监听用于自动显示/隐藏（绑定到建筑，随建筑自动移除）
+    if (!m_goldListener) {
+        m_goldListener = EventListenerCustom::create("EVENT_UPDATE_GOLD", [this](EventCustom* event) {
+            this->updateUpgradeButtonVisibility();
+        });
+        _eventDispatcher->addEventListenerWithSceneGraphPriority(m_goldListener, this);
+    }
+}
+
+void Building::hideUpgradeButton() {
+    if (m_upgradeBtn) {
+        m_upgradeBtn->removeFromParent();
+        m_upgradeBtn = nullptr;
+    }
+
+    if (m_goldListener) {
+        _eventDispatcher->removeEventListener(m_goldListener);
+        m_goldListener = nullptr;
+    }
+}
+
+void Building::updateUpgradeButtonVisibility() {
+    // Ensure we have a listener so future gold changes re-evaluate visibility
+    if (!m_goldListener) {
+        m_goldListener = EventListenerCustom::create("EVENT_UPDATE_GOLD", [this](EventCustom* event) {
+            this->updateUpgradeButtonVisibility();
+        });
+        _eventDispatcher->addEventListenerWithSceneGraphPriority(m_goldListener, this);
+    }
+
+    int cost = getUpgradeCost();
+    bool affordable = GameManager::getInstance()->getGold() >= cost;
+
+    if (affordable) {
+        // show if not already shown
+        if (!m_upgradeBtn) {
+            showUpgradeButton();
+        } else {
+            // update existing button text/state
+            m_upgradeBtn->setTitleText(std::string("UPGRADE\n$") + std::to_string(cost));
+            m_upgradeBtn->setEnabled(true);
+            m_upgradeBtn->setBright(true);
+        }
+    }
+    else {
+        // hide if exists
+        if (m_upgradeBtn) {
+            hideUpgradeButton();
+        }
+    }
 }

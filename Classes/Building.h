@@ -2,6 +2,7 @@
 #define __BUILDING_H__
 
 #include "GameEntity.h" // 确保路径正确
+#include "ui/CocosGUI.h"
 
 // 建筑类型枚举
 enum class BuildingType {
@@ -43,6 +44,15 @@ public:
 
     // 【新增】获取内部存储状态 (用于UI显示，比如满了显示图标)
     bool isFull() const;
+
+    // 升级相关 UI
+    void showUpgradeButton();
+    void hideUpgradeButton();
+    int getUpgradeCost() const;
+
+    // 根据当前金币自动显示/隐藏升级按钮（会监听 EVENT_UPDATE_GOLD）
+    void updateUpgradeButtonVisibility();
+
 protected:
     // 初始化特定类型的属性（血量、图片等）
     void initBuildingProperties();
@@ -61,6 +71,12 @@ protected:
 
     // 生产计时器累加器
     float m_productionAccumulator;
+
+    // 升级按钮
+    cocos2d::ui::Button* m_upgradeBtn;
+
+    // 监听金币变动的 listener（用于自动显示/隐藏）
+    cocos2d::EventListenerCustom* m_goldListener;
 };
 
 #endif // __BUILDING_H__
