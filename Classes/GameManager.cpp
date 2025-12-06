@@ -9,6 +9,11 @@ GameManager* GameManager::s_instance = nullptr;
 GameManager::GameManager()
     : m_gold(0), m_elixir(0), m_isInitialized(false)
 {
+    //初始化各兵种数量为0
+    m_troopCounts[TroopType::BARBARIAN] = 0;
+    m_troopCounts[TroopType::ARCHER] = 0;
+    m_troopCounts[TroopType::GIANT] = 0;
+    m_troopCounts[TroopType::BOMBERMAN] = 0;
 }
 
 GameManager* GameManager::getInstance() {
@@ -69,8 +74,62 @@ void GameManager::addHomeBuilding(BuildingType type, Vec2 pos) {
     data.position = pos;
     m_homeBuildings.push_back(data);
 }
-
+const std::vector<BuildingData>& GameManager::getHomeBuildings() { return m_homeBuildings; } // 获取当前建筑列表
 // 【新增实现】获取列表
-const std::vector<BuildingData>& GameManager::getHomeBuildings() {
-    return m_homeBuildings;
+void GameManager::addTroops(TroopType type, int amount) // 添加各兵种数量
+{
+    m_troopCounts[type] += amount;
+    if (m_troopCounts[type] < 0)
+    {
+        m_troopCounts[type] = 0; // 防止数量为负
+    }
+}
+
+void GameManager::consumeTroops(TroopType type, int amount) // 减少各兵种数量
+{
+    auto it = m_troopCounts.find(type);
+    if (it != m_troopCounts.end())
+    {
+        it->second -= amount;
+        if (it->second < 0)
+        {
+            it->second = 0; // 防止数量为负
+        }
+        Director::getInstance()->getEventDispatcher()->dispatchCustomEvent("EVENT_UPDATE_TROOPS");
+    }
+}
+
+int GameManager::getTroopCount(TroopType type) const // 获取指定兵种的数量
+{
+    auto it = m_troopCounts.find(type);
+    if (it != m_troopCounts.end())
+    {
+        return it->second;
+    }
+    return 0;
+}
+
+void GameManager::setTroopCount(TroopType type, int count) // 设置兵种数量（用于战斗结束后同步）
+
+{
+    m_troopCounts[type] = count;
+    if (m_troopCounts[type] < 0)
+    {
+        m_troopCounts[type] = 0;
+    }
+    Director::getInstance()->getEventDispatcher()->dispatchCustomEvent("EVENT_UPDATE_TROOPS");
+}
+
+const std::map<TroopType, int>& GameManager::getAllTroopCounts() const // 获取所有兵种数量
+{
+    return m_troopCounts;
+}
+
+void GameManager::resetAllTroops() // 重置所有兵种数量为0（战斗结束后调用）
+{
+    for (auto& pair : m_troopCounts)
+    {
+        pair.second = 0;
+    }
+    Director::getInstance()->getEventDispatcher()->dispatchCustomEvent("EVENT_UPDATE_TROOPS");
 }

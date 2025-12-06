@@ -3,6 +3,7 @@
 
 #include "cocos2d.h"
 #include "Building.h"
+#include "Troop.h"
 
 // 【关键修改】不要在这里 include Troop.h，防止死循环
 class Troop;
@@ -22,6 +23,14 @@ public:
     void addTroop(Troop* troop);
     void removeTroop(Troop* troop);
     Troop* findClosestTroop(cocos2d::Vec2 position, float range);
+    void initAvailableTroops(const std::map<TroopType, int>& availableTroops); // 初始化可投放兵种数量
+    bool canDeployTroop(TroopType type);                                       // 检查是否还能投放指定兵种
+    void deployTroop(TroopType type);                                          // 投放兵种（减少可用数量）
+    int getAvailableTroopCount(TroopType type);                                // 获取指定兵种的剩余数量
+    const std::map<TroopType, int>& getAllAvailableTroops() const;             // 获取所有可用兵种数量
+    void onTroopDied(TroopType type);                                          // 记录士兵死亡
+    const std::map<TroopType, int>& getDeployedTroops() const;                 // 获取已投放的兵种数量  
+    std::map<TroopType, int> getDeathCounts() const;                           // 获取战斗中死亡的兵种数量
 
     void clear();
 
@@ -31,6 +40,9 @@ private:
 
     cocos2d::Vector<Building*> m_buildings;
     cocos2d::Vector<Troop*> m_troops;
+    std::map<TroopType, int> m_availableTroops; // 存储可投放的兵种数量
+    std::map<TroopType, int> m_deployedTroops;  // 记录已投放的兵种数量（用于同步到经营模式）
+    std::map<TroopType, int> m_initialTroops;   // 记录战斗开始时的初始兵种数量（用于计算死亡数量）
 };
 
 #endif // __BATTLE_MANAGER_H__

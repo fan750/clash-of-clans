@@ -63,6 +63,12 @@
     <ClCompile Include="..\Classes\MenuBuilder.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\Classes\RecruitUI.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Classes\BarracksUI.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="main.h">
@@ -102,6 +108,12 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\Classes\MenuBuilder.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Classes\RecruitUI.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Classes\BarracksUI.h">
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>

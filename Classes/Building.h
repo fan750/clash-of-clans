@@ -13,7 +13,8 @@ enum class BuildingType {
     ARCHER_TOWER,   // 箭塔
     WALL,            // 围墙
     ELIXIR_STORAGE,   // 圣水瓶 (存储) [新增]
-    GOLD_STORAGE      // 储金罐 (存储) [新增]
+    GOLD_STORAGE,      // 储金罐 (存储) [新增]
+    BARRACKS          // 军营
 };
 
 class Building : public GameEntity {
@@ -29,7 +30,7 @@ public:
 
     // 重写基类的 updateLogic，用于处理建筑特有逻辑（如生产资源、索敌）
     virtual void updateLogic(float dt) override;
-
+    void activateBuilding();                                // 激活建筑，使其开始工作
     // 【核心功能】
     // 升级建筑
     void upgrade();
@@ -60,6 +61,7 @@ protected:
 protected:
     BuildingType m_type;
     int m_level;
+    bool m_isActive;               // 标记建筑是否已激活（开始工作）
 
     // 生产/攻击计时器
     float m_timer;

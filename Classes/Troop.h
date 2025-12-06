@@ -20,6 +20,7 @@ public:
     virtual bool init() override;
     virtual void updateLogic(float dt) override;
     virtual void onDeath() override;
+    TroopType getTroopType() const { return m_type; } // 获取兵种类型
 
     void setTarget(Building* target);
 

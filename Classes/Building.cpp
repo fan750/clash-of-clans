@@ -50,6 +50,14 @@ bool Building::init() {
     BattleManager::getInstance()->addBuilding(this);
     return true;
 }
+void Building::activateBuilding() // 激活建筑
+{
+    if (!m_isActive)
+    {
+        m_isActive = true;
+        this->scheduleUpdate(); // 只有在激活后才开启每帧更新
+    }
+}
 
 void Building::onDeath() {
     // 如果是存储建筑，死的时候要扣除上限

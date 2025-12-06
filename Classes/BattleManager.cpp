@@ -1,5 +1,6 @@
 #include "BattleManager.h"
 #include "Troop.h" // 【关键修改】在 cpp 里引用 Troop
+#include"GameManager.h"
 
 USING_NS_CC;
 
@@ -103,8 +104,122 @@ void BattleManager::dealAreaDamage(Vec2 center, float radius, int damage) {
         }
     }
 }
+void BattleManager::initAvailableTroops(const std::map<TroopType, int>& availableTroops)
+{
+    m_availableTroops = availableTroops;
 
-void BattleManager::clear() {
+    // 初始化已投放兵种数量为0
+    m_deployedTroops.clear();
+    m_deployedTroops[TroopType::BARBARIAN] = 0;
+    m_deployedTroops[TroopType::ARCHER] = 0;
+    m_deployedTroops[TroopType::GIANT] = 0;
+    m_deployedTroops[TroopType::BOMBERMAN] = 0;
+
+    // 记录初始兵种数量（从经营模式获取的总量）
+    m_initialTroops = availableTroops;
+}
+
+// 检查是否还能投放指定兵种
+bool BattleManager::canDeployTroop(TroopType type)
+{
+    auto it = m_availableTroops.find(type);
+    if (it != m_availableTroops.end())
+    {
+        return it->second > 0;
+    }
+    return false;
+}
+
+// 投放兵种（减少可用数量）
+void BattleManager::deployTroop(TroopType type)
+{
+    auto it = m_availableTroops.find(type);
+    if (it != m_availableTroops.end() && it->second > 0)
+    {
+        it->second--;
+        //增加已投放数量
+        m_deployedTroops[type]++;
+    }
+}
+
+// 记录士兵死亡
+void BattleManager::onTroopDied(TroopType type)
+{
+    auto it = m_deployedTroops.find(type);
+    if (it != m_deployedTroops.end() && it->second > 0)
+    {
+        it->second--;
+    }
+}
+
+// 获取已投放的兵种数量
+const std::map<TroopType, int>& BattleManager::getDeployedTroops() const
+{
+    return m_deployedTroops;
+}
+
+// 获取战斗中死亡的兵种数量
+std::map<TroopType, int> BattleManager::getDeathCounts() const
+{
+    std::map<TroopType, int> deathCounts;
+
+    // 死亡数量 = 初始数量 - 剩余可投放数量 - 当前场上存活数量
+    for (const auto& pair : m_initialTroops)
+    {
+        TroopType type = pair.first;
+        int initialCount = pair.second;
+
+        // 获取剩余可投放数量
+        int availableCount = 0;
+        auto availableIt = m_availableTroops.find(type);
+        if (availableIt != m_availableTroops.end())
+        {
+            availableCount = availableIt->second;
+        }
+
+        // 获取当前场上存活数量
+        int aliveCount = 0;
+        for (auto troop : m_troops)
+        {
+            if (!troop->isDead() && troop->getTroopType() == type)
+            {
+                aliveCount++;
+            }
+        }
+
+        // 计算死亡数量
+        int deathCount = initialCount - availableCount - aliveCount;
+        if (deathCount > 0)
+        {
+            deathCounts[type] = deathCount;
+        }
+    }
+
+    return deathCounts;
+}
+
+// 获取指定兵种的剩余数量
+int BattleManager::getAvailableTroopCount(TroopType type)
+{
+    auto it = m_availableTroops.find(type);
+    if (it != m_availableTroops.end())
+    {
+        return it->second;
+    }
+    return 0;
+}
+
+// 获取所有可用兵种数量
+const std::map<TroopType, int>& BattleManager::getAllAvailableTroops() const
+{
+    return m_availableTroops;
+}
+
+void BattleManager::clear()
+{
     m_buildings.clear();
     m_troops.clear();
+    m_availableTroops.clear();
+    m_deployedTroops.clear();
+    m_initialTroops.clear();
 }

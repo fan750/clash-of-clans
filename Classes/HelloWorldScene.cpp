@@ -117,6 +117,9 @@ bool HelloWorld::init() {
         Director::getInstance()->replaceScene(TransitionFade::create(0.5f, scene));
         });
     this->addChild(attackBtn);
+    // 初始化军营UI，并添加到场景中，但默认隐藏
+    m_barracksUI = BarracksUI::create();
+    this->addChild(m_barracksUI, 300); // 确保层级最高
 
     // ==========================================
     // 【新增】 关键步骤：恢复之前保存的建筑
@@ -129,6 +132,7 @@ bool HelloWorld::init() {
         // 因为是恢复出来的，已经是实体的，所以不透明度设为255
         b->setOpacity(255);
         this->addChild(b);
+        b->activateBuilding();
     }
 
     // 6. 注册触摸监听 (用于放置建筑)
@@ -162,6 +166,7 @@ void HelloWorld::initShopUI() {
         {"Cannon", BuildingType::CANNON, 200, true},        // 200金币买加农炮
         {"Wall", BuildingType::WALL, 50, true},             // 50金币买墙
         {"Archer Twr", BuildingType::ARCHER_TOWER, 300, true},
+        { "Barracks", BuildingType::BARRACKS, 500, true },            // 500金币购买军营
         { "Elixir Pump", BuildingType::ELIXIR_COLLECTOR, 100, true }, // 用金币买收集器
         {"Elixir Tank", BuildingType::ELIXIR_STORAGE, 300, true},   // 用金币买圣水瓶
         {"Gold Storage", BuildingType::GOLD_STORAGE, 300, false}    // 用圣水买储金罐
@@ -183,6 +188,10 @@ void HelloWorld::initShopUI() {
             });
 
         m_shopLayer->addChild(btn);
+        if (item.type == BuildingType::BARRACKS)
+        {
+            m_barracksShopButton = btn;
+        }
     }
 }
 
@@ -293,7 +302,16 @@ bool HelloWorld::onTouchBegan(Touch* touch, Event* event) {
     // 如果没在干别的，就检测是不是点到了建筑 (用于收集资源或选中)
     Vec2 touchLoc = touch->getLocation();
     bool hitBuilding = false;
-
+    if (!m_pendingBuilding && !m_isConfirming && !m_shopLayer->isVisible())
+    {
+        auto clickedBarracks = getBarracksAtPosition(touchLoc);
+        if (clickedBarracks)
+        {
+            CCLOG("Barracks clicked!");
+            m_barracksUI->show(); // 显示军营UI
+            return true; // 吞噬触摸，防止穿透
+        }
+    }
     for (auto node : this->getChildren()) {
         auto building = dynamic_cast<Building*>(node);
         if (building) {
@@ -440,7 +458,24 @@ void HelloWorld::onCancelPlacement() {
 
     CCLOG("Placement Cancelled!");
 }
-
+Building* HelloWorld::getBarracksAtPosition(Vec2 pos)
+{
+    // 遍历场景的所有子节点
+    for (auto child : this->getChildren())
+    {
+        // 尝试将子节点转换为Building类型
+        auto building = dynamic_cast<Building*>(child);
+        if (building && building->getBuildingType() == BuildingType::BARRACKS)
+        {
+            // 检查点击位置是否在军营的包围盒内
+            if (building->getBoundingBox().containsPoint(pos))
+            {
+                return building;
+            }
+        }
+    }
+    return nullptr;
+}
 void HelloWorld::playCollectAnimation(int amount, Vec2 startPos, BuildingType type) {
     // 1. 决定飞什么图标 (金币还是圣水)
     std::string iconName = (type == BuildingType::GOLD_MINE) ? "coin_icon.png" : "elixir_icon.png";

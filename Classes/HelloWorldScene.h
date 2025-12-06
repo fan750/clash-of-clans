@@ -3,7 +3,8 @@
 
 #include "cocos2d.h"
 #include "ui/CocosGUI.h"
-#include "Building.h" // 确保路径正确，可能是 "Building.h"
+#include "Building.h" 
+#include "BarracksUI.h"
 
 struct ShopItem {
     std::string name;
@@ -69,6 +70,10 @@ private:
 
     // 【新增】点击“取消”后的逻辑
     void onCancelPlacement();
+
+    Building* getBarracksAtPosition(cocos2d::Vec2 pos); // 用于处理点击军营的逻辑
+    cocos2d::ui::Button* m_barracksShopButton;          // 用于在建造后移除商店按钮
+    BarracksUI* m_barracksUI;                           // 军营UI实例
 };
 
 #endif // __HELLOWORLD_SCENE_H__

@@ -3,6 +3,7 @@
 
 #include "cocos2d.h"
 #include "Building.h" // 需要引用 BuildingType
+#include "Troop.h"    // 需要引用 TroopType
 
 // 定义一个结构体，专门存建筑的“档案”
 struct BuildingData {
@@ -40,6 +41,13 @@ public:
     int getMaxGold() const { return m_maxGold; }
     int getMaxElixir() const { return m_maxElixir; }
 
+    void addTroops(TroopType type, int amount);                 // 增加各兵种数量
+    int getTroopCount(TroopType type) const;                    // 获取指定兵种的数量
+    void consumeTroops(TroopType type, int amount);             // 减少指定兵种数量（用于战斗死亡同步）
+    void setTroopCount(TroopType type, int count);              // 设置兵种数量（用于战斗结束后同步）
+    const std::map<TroopType, int>& getAllTroopCounts() const;  // 获取所有兵种数量
+    void resetAllTroops();                                      // 重置所有兵种数量为0（战斗结束后调用）
+
 private:
     GameManager();
     static GameManager* s_instance;
@@ -54,6 +62,7 @@ private:
 
     // 【新增】建筑数据列表
     std::vector<BuildingData> m_homeBuildings;
+    std::map<TroopType, int> m_troopCounts;    // 存储各兵种数量
 };
 
 #endif // __GAME_MANAGER_H__

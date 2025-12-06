@@ -3,6 +3,7 @@
 #include "BattleManager.h"
 #include "Building.h"
 #include "Troop.h"
+#include"GameManager.h"
 
 USING_NS_CC;
 using namespace ui; // 使用 UI 命名空间
@@ -53,6 +54,30 @@ bool BattleScene::init() {
     // 1. 初始化数据
     BattleManager::getInstance()->clear();
     m_selectedType = TroopType::BARBARIAN; // 默认选野蛮人
+    BattleManager::getInstance()->clear();
+    m_selectedType = TroopType::BARBARIAN; // 默认选Barbarian
+
+    // 从GameManager获取兵种数量并初始化到BattleManager
+    auto gm = GameManager::getInstance();
+    std::map<TroopType, int> availableTroops;
+    availableTroops[TroopType::BARBARIAN] = gm->getTroopCount(TroopType::BARBARIAN);
+    availableTroops[TroopType::ARCHER] = gm->getTroopCount(TroopType::ARCHER);
+    availableTroops[TroopType::GIANT] = gm->getTroopCount(TroopType::GIANT);
+    availableTroops[TroopType::BOMBERMAN] = gm->getTroopCount(TroopType::BOMBERMAN);
+    BattleManager::getInstance()->initAvailableTroops(availableTroops);
+
+    // 2. 布置敌人阵地 (保持不变)
+    auto enemyTown = Building::create(BuildingType::TOWN_HALL);
+    enemyTown->setPosition(Vec2(visibleSize.width / 2, visibleSize.height / 2));
+    this->addChild(enemyTown);
+
+    // 加几个墙给Bomberman炸
+    for (int i = 0; i < 5; i++)
+    {
+        auto wall = Building::create(BuildingType::WALL);
+        wall->setPosition(Vec2(visibleSize.width / 2 - 100 + i * 40, visibleSize.height / 2 - 100));
+        this->addChild(wall);
+    }
 
     // 3. 【新增】创建提示文字
     m_infoLabel = Label::createWithSystemFont("Selected: Barbarian", "Arial", 24);
@@ -81,6 +106,110 @@ bool BattleScene::init() {
     _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
 
     return true;
+}
+void BattleScene::onBattleEnd()
+{
+    // 获取战斗中死亡的兵种数量
+    auto bm = BattleManager::getInstance();
+    auto deathCounts = bm->getDeathCounts();
+
+    // 同步死亡数量到GameManager
+    auto gm = GameManager::getInstance();
+    for (const auto& pair : deathCounts)
+    {
+        TroopType type = pair.first;
+        int deathCount = pair.second;
+
+        if (deathCount > 0)
+        {
+            gm->consumeTroops(type, deathCount);
+        }
+    }
+
+    // 清空战斗管理器
+    bm->clear();
+}
+
+// 初始化兵种数量显示
+void BattleScene::initTroopCountLabels()
+{
+    Size visibleSize = Director::getInstance()->getVisibleSize();
+    float startY = 100; // 起始Y坐标
+    float lineHeight = 20; // 行高
+
+    // 兵种信息数组
+    struct TroopInfo
+    {
+        TroopType type;
+        std::string name;
+        Color3B color;
+    };
+
+    std::vector<TroopInfo> troopTypes =
+    {
+        {TroopType::BARBARIAN, "Barb:", Color3B::GREEN},
+        {TroopType::ARCHER, "Arch:", Color3B::MAGENTA},
+        {TroopType::GIANT, "Giant:", Color3B::ORANGE},
+        {TroopType::BOMBERMAN, "Bomb:", Color3B::GRAY}
+    };
+
+    // 为每种兵种创建数量标签
+    for (size_t i = 0; i < troopTypes.size(); ++i)
+    {
+        const TroopInfo& info = troopTypes[i];
+
+        auto label = Label::createWithSystemFont(info.name + " 0", "Arial", 16);
+        label->setColor(info.color);
+        label->setPosition(Vec2(visibleSize.width - 250 + i * 60, startY));
+        label->setAnchorPoint(Vec2(0.5, 0.5));
+        this->addChild(label, 10);
+
+        m_troopCountLabels[info.type] = label;
+    }
+}
+
+// 更新兵种数量显示
+void BattleScene::updateTroopCountLabels()
+{
+    auto bm = BattleManager::getInstance();
+
+    for (const auto& pair : m_troopCountLabels)
+    {
+        TroopType type = pair.first;
+        Label* label = pair.second;
+
+        // 从BattleManager获取剩余数量
+        int count = bm->getAvailableTroopCount(type);
+
+        // 获取兵种名称
+        std::string troopName;
+        switch (type)
+        {
+        case TroopType::BARBARIAN: troopName = "Barb:";  break;
+        case TroopType::ARCHER:    troopName = "Arch:";  break;
+        case TroopType::GIANT:     troopName = "Giant:"; break;
+        case TroopType::BOMBERMAN: troopName = "Bomb:";  break;
+        }
+
+        label->setString(troopName + std::to_string(count));
+
+        // 如果数量为0，将标签颜色变暗
+        if (count == 0)
+        {
+            label->setColor(Color3B(80, 80, 80)); // 暗灰色
+        }
+        else
+        {
+            // 恢复原始颜色
+            switch (type)
+            {
+            case TroopType::BARBARIAN: label->setColor(Color3B::GREEN); break;
+            case TroopType::ARCHER: label->setColor(Color3B::MAGENTA); break;
+            case TroopType::GIANT: label->setColor(Color3B::ORANGE); break;
+            case TroopType::BOMBERMAN: label->setColor(Color3B::GRAY); break;
+            }
+        }
+    }
 }
 
 // 【新增】辅助函数：快速创建按钮
@@ -115,11 +244,24 @@ bool BattleScene::onTouchBegan(Touch* touch, Event* event) {
 
     // 如果点击到了按钮区域（屏幕下方 80 像素内），就不放兵，防止误触
     if (touchLoc.y < 80) return false;
-
+    if (!BattleManager::getInstance()->canDeployTroop(m_selectedType))
+    {
+        CCLOG("No more troops of this type available!");
+        // 可以添加一个提示效果
+        m_infoLabel->setString("No more troops available!");
+        m_infoLabel->setColor(Color3B::RED);
+        return true;
+    }
     // 【修改】使用当前选中的类型 (m_selectedType)
     auto troop = Troop::create(m_selectedType);
     troop->setPosition(touchLoc);
     this->addChild(troop);
+    // 投放兵种，减少可用数量
+    BattleManager::getInstance()->deployTroop(m_selectedType);
+
+    // 更新兵种数量显示
+    updateTroopCountLabels();
+
 
     return true;
 }
